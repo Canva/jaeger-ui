@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from 'react';
-import { Form, Input, Button, Popover, Select, Row, Col } from 'antd';
+import { Form, Input, Button, Popover, Select, Row, Col, Checkbox } from 'antd';
 import _get from 'lodash/get';
 import logfmtParser from 'logfmt/lib/logfmt_parser';
 import { stringify as logfmtStringify } from 'logfmt/lib/stringify';
@@ -42,6 +42,7 @@ const Option = Select.Option;
 
 const AdaptedInput = reduxFormFieldAdapter({ AntInputComponent: Input });
 const AdaptedSelect = reduxFormFieldAdapter({ AntInputComponent: Select });
+const AdaptedCheckbox = reduxFormFieldAdapter({ AntInputComponent: Checkbox });
 const AdaptedVirtualSelect = reduxFormFieldAdapter({
   AntInputComponent: VirtSelect,
   onChangeAdapter: option => (option ? option.value : null),
@@ -187,9 +188,9 @@ export function validateDurationFields(value) {
   return /\d[\d\\.]*(us|ms|s|m|h)$/.test(value)
     ? undefined
     : {
-        content: `Please enter a number followed by a duration unit, ${placeholderDurationFields}`,
-        title: 'Please match the requested format.',
-      };
+      content: `Please enter a number followed by a duration unit, ${placeholderDurationFields}`,
+      title: 'Please match the requested format.',
+    };
 }
 
 export function convertQueryParamsToFormDates({ start, end }) {
@@ -220,6 +221,7 @@ export function submitForm(fields, searchTraces) {
   const {
     resultsLimit,
     service,
+    offsetEnabled,
     startDate,
     startDateTime,
     endDate,
@@ -237,8 +239,9 @@ export function submitForm(fields, searchTraces) {
   let end;
   if (lookback !== 'custom') {
     const now = new Date();
-    start = lookbackToTimestamp(lookback, now);
-    end = now * 1000;
+    const offset = offsetEnabled === true ? 5 * 60 * 1000 : 0;
+    start = lookbackToTimestamp(lookback, now - offset, offsetEnabled);
+    end = (now - offset) * 1000;
   } else {
     const times = getUnixTimeStampInMSFromForm({
       startDate,
@@ -273,6 +276,7 @@ export class SearchFormImpl extends React.PureComponent {
       searchMaxLookback,
       selectedLookback,
       selectedService = '-',
+      offsetEnabled,
       services,
       submitting: disabled,
     } = this.props;
@@ -280,6 +284,7 @@ export class SearchFormImpl extends React.PureComponent {
     const opsForSvc = (selectedServicePayload && selectedServicePayload.operations) || [];
     const noSelectedService = selectedService === '-' || !selectedService;
     const tz = selectedLookback === 'custom' ? new Date().toTimeString().replace(/^.*?GMT/, 'UTC') : null;
+
     return (
       <Form layout="vertical" onSubmit={handleSubmit}>
         <FormItem
@@ -368,6 +373,16 @@ export class SearchFormImpl extends React.PureComponent {
             <Option value="custom">Custom Time Range</Option>
           </Field>
         </FormItem>
+
+        {selectedLookback !== 'custom' && (
+          <FormItem label="Lookback Offset" className="checkbox--LookbackOffset">
+            <Row gutter={16}>
+              <Col span={4}><Field name="offsetEnabled" component={AdaptedCheckbox} defaultChecked={offsetEnabled} type="checkbox" /></Col>
+              <Col span={20}>Add a 5 minute offset to the search to ensure you only see complete traces.</Col>
+            </Row>
+          </FormItem>
+        )}
+
 
         {selectedLookback === 'custom' && [
           <FormItem
@@ -508,6 +523,7 @@ SearchFormImpl.propTypes = {
   ),
   selectedService: PropTypes.string,
   selectedLookback: PropTypes.string,
+  offsetEnabled: PropTypes.bool,
 };
 
 SearchFormImpl.defaultProps = {
@@ -516,6 +532,7 @@ SearchFormImpl.defaultProps = {
   submitting: false,
   selectedService: null,
   selectedLookback: null,
+  offsetEnabled: true,
 };
 
 export const searchSideBarFormSelector = formValueSelector('searchSideBar');
@@ -630,10 +647,12 @@ export function mapStateToProps(state) {
       minDuration: minDuration || null,
       maxDuration: maxDuration || null,
       traceIDs: traceIDs || null,
+      offsetEnabled: true,
     },
     searchMaxLookback: _get(state, 'config.search.maxLookback'),
     selectedService: searchSideBarFormSelector(state, 'service'),
     selectedLookback: searchSideBarFormSelector(state, 'lookback'),
+    offsetEnabled: searchSideBarFormSelector(state, 'offsetEnabled'),
   };
 }
 
