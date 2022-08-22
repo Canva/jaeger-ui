@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from 'react';
-import { Form, Input, Button, Popover, Select, Row, Col, Checkbox } from 'antd';
+import { Form, Input, Button, Popover, Select, Row, Col, Switch } from 'antd';
 import _get from 'lodash/get';
 import logfmtParser from 'logfmt/lib/logfmt_parser';
 import { stringify as logfmtStringify } from 'logfmt/lib/stringify';
@@ -42,7 +42,7 @@ const Option = Select.Option;
 
 const AdaptedInput = reduxFormFieldAdapter({ AntInputComponent: Input });
 const AdaptedSelect = reduxFormFieldAdapter({ AntInputComponent: Select });
-const AdaptedCheckbox = reduxFormFieldAdapter({ AntInputComponent: Checkbox });
+const AdaptedSwitch = reduxFormFieldAdapter({ AntInputComponent: Switch });
 const AdaptedVirtualSelect = reduxFormFieldAdapter({
   AntInputComponent: VirtSelect,
   onChangeAdapter: option => (option ? option.value : null),
@@ -375,10 +375,31 @@ export class SearchFormImpl extends React.PureComponent {
         </FormItem>
 
         {selectedLookback !== 'custom' && (
-          <FormItem label="Lookback Offset" className="checkbox--LookbackOffset">
+          <FormItem label={
+            <div>
+              Lookback Offset{' '}
+              <Popover
+                placement="topLeft"
+                trigger="click"
+                content={
+                  <div>
+                    <code className="SearchForm--offsetHint">
+                      Add a 5 minute offset to the search. This helps avoid incomplete spans from appearing in search results.
+                    </code>
+                  </div>
+                }
+              >
+                <IoHelp className="SearchForm--offsetHintTrigger" />
+              </Popover>
+            </div>
+          }
+            className="switch--LookbackOffset"
+          >
+
             <Row gutter={16}>
-              <Col span={4}><Field name="offsetEnabled" component={AdaptedCheckbox} defaultChecked={offsetEnabled} type="checkbox" /></Col>
-              <Col span={20}>Add a 5 minute offset to the search to ensure you only see complete traces.</Col>
+              <Col span={24}>
+                <Field name="offsetEnabled" component={AdaptedSwitch} defaultChecked={offsetEnabled} type="checkbox" />
+              </Col>
             </Row>
           </FormItem>
         )}
