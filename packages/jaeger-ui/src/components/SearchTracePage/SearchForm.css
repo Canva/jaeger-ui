@@ -31,6 +31,19 @@ limitations under the License.
   border-color: #000;
 }
 
+.SearchForm--offsetHintTrigger {
+  border: 1px solid #999;
+  border-radius: 100px;
+  color: #999;
+  cursor: pointer;
+  padding: 1px;
+}
+
+.SearchForm--offsetHintTrigger:hover {
+  color: #000;
+  border-color: #000;
+}
+
 .SearchForm--tagsHintTitle {
   margin-top: 0.5em;
 }
@@ -47,4 +60,8 @@ limitations under the License.
 
 .SearchForm--tagsHintEg {
   color: teal;
+}
+
+.SearchForm--offsetHint {
+  color: #000;
 }
