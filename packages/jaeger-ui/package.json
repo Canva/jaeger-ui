@@ -41,6 +41,7 @@
     "source-map-explorer": "^1.6.0"
   },
   "dependencies": {
+    "@ant-design/icons": "^4.7.0",
     "@jaegertracing/plexus": "0.2.0",
     "@types/classnames": "^2.2.7",
     "@types/deep-freeze": "^0.1.1",
