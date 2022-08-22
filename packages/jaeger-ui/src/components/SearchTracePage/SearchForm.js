@@ -395,7 +395,6 @@ export class SearchFormImpl extends React.PureComponent {
           }
             className="switch--LookbackOffset"
           >
-
             <Row gutter={16}>
               <Col span={24}>
                 <Field name="offsetEnabled" component={AdaptedSwitch} defaultChecked={offsetEnabled} type="checkbox" />
@@ -403,7 +402,6 @@ export class SearchFormImpl extends React.PureComponent {
             </Row>
           </FormItem>
         )}
-
 
         {selectedLookback === 'custom' && [
           <FormItem
