@@ -25,7 +25,7 @@ import SpanBar from './SpanBar';
 import Ticks from './Ticks';
 
 import { TNil } from '../../../types';
-import { Span } from '../../../types/trace';
+import { KeyValuePair, Span } from '../../../types/trace';
 
 import './SpanBarRow.css';
 
@@ -104,12 +104,21 @@ export default class SpanBarRow extends React.PureComponent<SpanBarRowProps> {
       duration,
       hasChildren: isParent,
       operationName,
-      process: { serviceName },
+      process: { serviceName, tags },
     } = span;
     const label = formatDuration(duration);
     const viewBounds = getViewedBounds(span.startTime, span.startTime + span.duration);
     const viewStart = viewBounds.start;
     const viewEnd = viewBounds.end;
+
+    const appSource: KeyValuePair = tags.reduce((acc, val) => val.key == "app.source" ? val : acc);
+    const isFrontEndSpan = appSource.value == "web";
+
+    var libraryName: string = serviceName;
+    if (isFrontEndSpan) {
+      const libraryTag = tags.reduce((acc, val) => val.key == "otel.library.name" ? val : acc);
+      libraryName = libraryTag.value;
+    };
 
     const labelDetail = `${serviceName}::${operationName}`;
     let longLabel;
@@ -150,7 +159,7 @@ export default class SpanBarRow extends React.PureComponent<SpanBarRowProps> {
                 className={`span-svc-name ${isParent && !isChildrenExpanded ? 'is-children-collapsed' : ''}`}
               >
                 {showErrorIcon && <IoAlert className="SpanBarRow--errorIcon" />}
-                {serviceName}{' '}
+                {isFrontEndSpan ? libraryName : serviceName}{' '}
                 {rpc && (
                   <span>
                     <IoArrowRightA />{' '}
