@@ -104,20 +104,22 @@ export default class SpanBarRow extends React.PureComponent<SpanBarRowProps> {
       duration,
       hasChildren: isParent,
       operationName,
-      process: { serviceName, tags },
+      process: { serviceName, tags: processTags },
+      tags: spanTags
     } = span;
     const label = formatDuration(duration);
     const viewBounds = getViewedBounds(span.startTime, span.startTime + span.duration);
     const viewStart = viewBounds.start;
     const viewEnd = viewBounds.end;
 
-    const appSource: KeyValuePair = tags.reduce((acc, val) => val.key == "app.source" ? val : acc);
-    const isFrontEndSpan = appSource.value == "web";
+    const isFrontEndSpan = processTags.some((tag) => tag.key === "app.source" && tag.value === "web");
 
-    var libraryName: string = serviceName;
+    let frontendSpanHeader: string = serviceName;
     if (isFrontEndSpan) {
-      const libraryTag = tags.reduce((acc, val) => val.key == "otel.library.name" ? val : acc);
-      libraryName = libraryTag.value;
+      const otelLibraryName = spanTags.reduce((acc, val) => val.key === "otel.library.name" ? val.value : acc, undefined);
+      if (otelLibraryName) {
+        frontendSpanHeader = `${serviceName} - ${otelLibraryName}`;
+      };
     };
 
     const labelDetail = `${serviceName}::${operationName}`;
@@ -159,7 +161,7 @@ export default class SpanBarRow extends React.PureComponent<SpanBarRowProps> {
                 className={`span-svc-name ${isParent && !isChildrenExpanded ? 'is-children-collapsed' : ''}`}
               >
                 {showErrorIcon && <IoAlert className="SpanBarRow--errorIcon" />}
-                {isFrontEndSpan ? libraryName : serviceName}{' '}
+                {isFrontEndSpan ? frontendSpanHeader : serviceName}{' '}
                 {rpc && (
                   <span>
                     <IoArrowRightA />{' '}
