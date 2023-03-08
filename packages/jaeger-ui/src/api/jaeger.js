@@ -76,6 +76,43 @@ function getJSON(url, options = {}) {
   });
 }
 
+function populateSpanReference(reference, traceUrl) {
+  if (reference.span) {
+    return Promise.resolve();
+  }
+
+  return (
+    getJSON(traceUrl)
+      .then(refTraceData => {
+        const referenceTrace = refTraceData && refTraceData.data && refTraceData.data[0];
+        if (
+          !referenceTrace ||
+          !Array.isArray(referenceTrace.spans) ||
+          typeof referenceTrace.processes !== 'object'
+        ) {
+          return;
+        }
+
+        // We need to reassign `reference.span`, hence ignore no-param-reassign linting rule.
+        // eslint-disable-next-line
+        reference.span = referenceTrace.spans.find(
+          candidateSpan => candidateSpan.spanID === reference.spanID
+        );
+        if (reference.span && typeof reference.span.processID === 'string') {
+          // We need to reassign `reference.span`, hence ignore no-param-reassign linting rule.
+          // eslint-disable-next-line
+          reference.span.process = referenceTrace.processes[reference.span.processID];
+        }
+      })
+      // Catch and swallow error. If we can't parse the reference, Jaeger UI should continue to function
+      // `reference.span` population.
+      .catch(e => {
+        // eslint-disable-next-line
+        console.error(e);
+      })
+  );
+}
+
 export const DEFAULT_API_ROOT = prefixUrl('/api/');
 export const ANALYTICS_ROOT = prefixUrl('/analytics/');
 export const DEFAULT_DEPENDENCY_LOOKBACK = moment.duration(1, 'weeks').asMilliseconds();
@@ -112,7 +149,28 @@ const JaegerAPI = {
     return getJSON(`${this.apiRoot}services`);
   },
   fetchTrace(id) {
-    return getJSON(`${this.apiRoot}traces/${id}`);
+    return getJSON(`${this.apiRoot}traces/${id}`).then(async traceData => {
+      const trace = traceData && traceData.data && traceData.data[0];
+      const populateSpanReferences = [];
+      if (trace && Array.isArray(trace.spans)) {
+        trace.spans.map(span => {
+          if (!Array.isArray(span.references)) {
+            return null;
+          }
+
+          span.references.map(reference => {
+            populateSpanReferences.push(
+              populateSpanReference(reference, `${this.apiRoot}traces/${reference.traceID}`)
+            );
+
+            return null;
+          });
+          return null;
+        });
+      }
+
+      return Promise.all(populateSpanReferences).then(() => traceData);
+    });
   },
   searchTraces(query) {
     return getJSON(`${this.apiRoot}traces`, { query });
