@@ -99,7 +99,7 @@ function populateSpanReference(reference, traceUrl) {
           candidateSpan => candidateSpan.spanID === reference.spanID
         );
         if (reference.span && typeof reference.span.processID === 'string') {
-          // We need to reassign `reference.span`, hence ignore no-param-reassign linting rule.
+          // We need to reassign `reference.span.process`, hence ignore no-param-reassign linting rule.
           // eslint-disable-next-line
           reference.span.process = referenceTrace.processes[reference.span.processID];
         }
