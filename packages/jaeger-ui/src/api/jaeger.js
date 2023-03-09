@@ -113,6 +113,46 @@ function populateSpanReference(reference, traceUrl) {
   );
 }
 
+function populateSpanReferences(traceData, traceUrl) {
+  if (!traceData || !Array.isArray(traceData.data)) {
+    return traceData;
+  }
+
+  const populateSpanReferencesPromises = [];
+  try {
+    traceData.data.map(trace => {
+      if (trace && Array.isArray(trace.spans)) {
+        trace.spans.map(span => {
+          if (!Array.isArray(span.references)) {
+            return null;
+          }
+
+          span.references.map(reference => {
+            if (reference && reference.refType === 'FOLLOWS_FROM' && reference.traceID !== trace.traceID) {
+              populateSpanReferencesPromises.push(
+                populateSpanReference(reference, `${traceUrl}${reference.traceID}`)
+              );
+            }
+
+            return null;
+          });
+          return null;
+        });
+      }
+      return null;
+    });
+  } catch (e) {
+    // Catch and swallow error. If we can't parse the reference, Jaeger UI should continue to function
+    // `reference.span` population.
+
+    // eslint-disable-next-line
+    console.error(e);
+    return Promise.resolve(traceData);
+  }
+
+  return Promise.all(populateSpanReferencesPromises).then(() => traceData);
+}
+
 export const DEFAULT_API_ROOT = prefixUrl('/api/');
 export const ANALYTICS_ROOT = prefixUrl('/analytics/');
 export const DEFAULT_DEPENDENCY_LOOKBACK = moment.duration(1, 'weeks').asMilliseconds();
@@ -149,31 +189,14 @@ const JaegerAPI = {
     return getJSON(`${this.apiRoot}services`);
   },
   fetchTrace(id) {
-    return getJSON(`${this.apiRoot}traces/${id}`).then(async traceData => {
-      const trace = traceData && traceData.data && traceData.data[0];
-      const populateSpanReferences = [];
-      if (trace && Array.isArray(trace.spans)) {
-        trace.spans.map(span => {
-          if (!Array.isArray(span.references)) {
-            return null;
-          }
-
-          span.references.map(reference => {
-            populateSpanReferences.push(
-              populateSpanReference(reference, `${this.apiRoot}traces/${reference.traceID}`)
-            );
-
-            return null;
-          });
-          return null;
-        });
-      }
-
-      return Promise.all(populateSpanReferences).then(() => traceData);
-    });
+    return getJSON(`${this.apiRoot}traces/${id}`).then(traceData =>
+      populateSpanReferences(traceData, `${this.apiRoot}traces/`)
+    );
   },
   searchTraces(query) {
-    return getJSON(`${this.apiRoot}traces`, { query });
+    return getJSON(`${this.apiRoot}traces`, { query }).then(traceData =>
+      populateSpanReferences(traceData, `${this.apiRoot}traces/`)
+    );
   },
   fetchMetrics(metricType, serviceNameList, query) {
     const servicesName = serviceNameList.map(serviceName => `service=${serviceName}`).join(',');
