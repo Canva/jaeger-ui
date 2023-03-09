@@ -105,7 +105,7 @@ function populateSpanReference(reference, traceUrl) {
         }
       })
       // Catch and swallow error. If we can't parse the reference, Jaeger UI should continue to function
-      // `reference.span` population.
+      // without `reference.span` population.
       .catch(e => {
         // eslint-disable-next-line
         console.error(e);
